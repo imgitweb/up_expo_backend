@@ -1,0 +1,22 @@
+{
+  "name": "mp-xpo-backend",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "nodemon server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "~1.4.4",
+    "cors": "^2.8.6",
+    "debug": "~2.6.9",
+    "dotenv": "^17.2.3",
+    "express": "~4.16.1",
+    "express-validator": "^7.3.1",
+    "http-errors": "~1.6.3",
+    "jade": "~1.11.0",
+    "mongoose": "^9.1.5",
+    "morgan": "~1.9.1",
+    "nodemailer": "^7.0.13",
+    "nodemon": "^3.1.11"
+  }
+}
