@@ -5,16 +5,14 @@ const visitorRoutes = require("./routes/visitor.route");
 const contactRoutes = require("./routes/contact.route");
 
 const app = express();
-
+app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173","bundelkhandexpo.com"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   }),
 );
-
-app.use(express.json());
 
 app.use("/api/visitors", visitorRoutes);
 app.use("/api/contacts", contactRoutes);
