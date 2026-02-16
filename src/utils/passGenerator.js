@@ -1,7 +1,7 @@
-const puppeteer = require('puppeteer');
-const QRCode = require('qrcode');
-const fs = require('fs');
-const path = require('path');
+const puppeteer = require("puppeteer");
+const QRCode = require("qrcode");
+const fs = require("fs");
+const path = require("path");
 
 /**
  * Helper to convert local image to Base64
@@ -9,36 +9,49 @@ const path = require('path');
 const imageToBase64 = (filePath) => {
   try {
     const bitmap = fs.readFileSync(filePath);
-    return `data:image/jpeg;base64,${bitmap.toString('base64')}`;
+    return `data:image/jpeg;base64,${bitmap.toString("base64")}`;
   } catch (err) {
     console.error("Image loading failed:", err);
     return null;
   }
 };
 
-const generateVisitorPass = async (visitor, type = 'pdf') => {
+const generateVisitorPass = async (visitor, type = "pdf") => {
   let browser = null;
   try {
     // 1. Resources Generate Karein
-    const qrCodeData = await QRCode.toDataURL(JSON.stringify({
-      id: visitor.visitorId,
-      name: visitor.name,
-      email: visitor.email
-    }));
+    const qrCodeData = await QRCode.toDataURL(
+      JSON.stringify({
+        id: visitor.visitorId,
+        name: visitor.name,
+        email: visitor.email,
+      }),
+    );
 
     // Background Image Load
-    const imagePath = path.join(__dirname, '../pass/pass1.jpeg');
+    const imagePath = path.join(__dirname, "../pass/pass1.jpeg");
     const backgroundBase64 = imageToBase64(imagePath);
 
     if (!backgroundBase64) {
       throw new Error("Template image not found!");
     }
 
-    // 2. Browser Launch
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    try {
+      // 1️⃣ Try system Chrome
+      browser = await puppeteer.launch({
+        headless: "new",
+        channel: "chrome",
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+    } catch (err) {
+      console.log("⚠ System Chrome not found, using bundled Chromium...");
+
+      // 2️⃣ Fallback to Puppeteer Chromium
+      browser = await puppeteer.launch({
+        headless: "new",
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+    }
     const page = await browser.newPage();
 
     // 3. HTML Content Set Karein
@@ -137,25 +150,24 @@ const generateVisitorPass = async (visitor, type = 'pdf') => {
 
     // 4. Puppeteer Page Setup
     await page.setViewport({ width: 1550, height: 520, deviceScaleFactor: 2 });
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
     let buffer;
-    if (type === 'pdf') {
-       buffer = await page.pdf({
-         printBackground: true,
-         width: '1550px',
-         height: '520px',
-         pageRanges: '1',
-         margin: { top: 0, right: 0, bottom: 0, left: 0 }
-       });
+    if (type === "pdf") {
+      buffer = await page.pdf({
+        printBackground: true,
+        width: "1550px",
+        height: "520px",
+        pageRanges: "1",
+        margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      });
     } else {
-       const element = await page.$('.pass-container');
-       buffer = await element.screenshot({ type: 'jpeg', quality: 90 });
+      const element = await page.$(".pass-container");
+      buffer = await element.screenshot({ type: "jpeg", quality: 90 });
     }
 
     await browser.close();
     return buffer;
-
   } catch (error) {
     if (browser) await browser.close();
     console.error("Pass Generation Error:", error);
