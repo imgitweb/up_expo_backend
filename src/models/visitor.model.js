@@ -2,19 +2,46 @@ const mongoose = require("mongoose");
 
 const visitorSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    phone: { type: String, required: true },
-    city: { type: String, required: true },
-    profession: { type: String, required: true },
-    purpose: { type: String, required: true },
-    paymentStatus: {
+    name: {
       type: String,
-      enum: ["PENDING", "PAID"],
-      default: "PENDING",
+      required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true, // Prevents duplicate emails
+      trim: true,
+      lowercase: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    city: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    profession: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    purpose: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    // ✅ NEW FIELD: visitorId
+    visitorId: {
+      type: String,
+      required: true,
+      unique: true, // Ensures every ID is unique
     },
   },
-  { timestamps: true }
+  { timestamps: true } // Adds createdAt and updatedAt automatically
 );
 
 module.exports = mongoose.model("Visitor", visitorSchema);

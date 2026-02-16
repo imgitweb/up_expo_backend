@@ -1,23 +1,26 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: false,
+  service: "gmail", // Automatically sets host to smtp.gmail.com & port
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER, // Your Gmail address
+    pass: process.env.EMAIL_PASS, // ⚠️ IMPORTANT: Use the 16-digit App Password here
   },
 });
 
-const sendEmail = async ({ to, subject, html }) => {
+// Added 'attachments' to the destructured arguments
+const sendEmail = async ({ to, subject, html, attachments }) => {
   try {
-    await transporter.sendMail({
+    const mailOptions = {
       from: `"BVS STARTUP EXPO" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
-    });
+      attachments, // ✅ Now passing the PDF attachment
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Email sent successfully to ${to}`);
   } catch (error) {
     console.error("EMAIL ERROR:", error);
     throw error;

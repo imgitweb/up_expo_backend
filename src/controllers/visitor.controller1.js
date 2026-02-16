@@ -1,8 +1,6 @@
 const Visitor = require("../models/visitor.model");
 const { sendEmail } = require("../services/nodemailer.service");
-const { generateVisitorPass } = require("../utils/passGenerator"); 
 
-// Helper to sanitize inputs
 const escapeHTML = (str = "") =>
   str.replace(
     /[&<>"']/g,
@@ -16,14 +14,10 @@ const escapeHTML = (str = "") =>
       })[m],
   );
 
-// ==========================================
-// 1. REGISTER VISITOR CONTROLLER
-// ==========================================
 const registerVisitor = async (req, res) => {
   try {
     const { name, email, phone, city, profession, purpose } = req.body;
 
-    // --- Validation ---
     if (
       !name?.trim() ||
       !email?.trim() ||
@@ -38,7 +32,6 @@ const registerVisitor = async (req, res) => {
       });
     }
 
-    // --- Duplicate Check ---
     const exists = await Visitor.findOne({ email: email.trim() });
     if (exists) {
       return res.status(409).json({
@@ -47,15 +40,6 @@ const registerVisitor = async (req, res) => {
       });
     }
 
-    const currentCount = await Visitor.countDocuments();
-    const nextNumber = currentCount + 1;
-
-    // --- Generate Visitor ID ---
-    // ✅ Generates a random 6-digit ID like "BVS-123456"
-    const generatedVisitorId = "BVS-" + String(nextNumber).padStart(5, "0");
-
-    // --- Create Visitor in DB ---
-    // ✅ Saving the generated ID to the database
     const visitor = await Visitor.create({
       name: name.trim(),
       email: email.trim(),
@@ -63,19 +47,8 @@ const registerVisitor = async (req, res) => {
       city: city.trim(),
       profession: profession.trim(),
       purpose: purpose.trim(),
-      visitorId: generatedVisitorId 
     });
 
-    // --- Generate PDF Pass (For Email) ---
-    let pdfBuffer = null;
-    try {
-        pdfBuffer = await generateVisitorPass(visitor, 'pdf');
-    } catch (err) {
-        console.error("PDF Generation Failed for Email:", err);
-        // We continue execution so email is still sent, even if PDF fails
-    }
-
-    // --- Send Email to ORGANIZER (No Attachment) ---
     try {
       await sendEmail({
         to: process.env.ORGANIZER_EMAIL || "startupexpo2026@gmail.com",
@@ -99,27 +72,39 @@ const registerVisitor = async (req, res) => {
                 <table style="width:100%;border-collapse:collapse;font-size:14px;">
                   <tr>
                     <td style="padding:8px;border-bottom:1px solid #eee;"><strong>Name</strong></td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;">${escapeHTML(name)}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee;">
+                      ${escapeHTML(name)}
+                    </td>
                   </tr>
                   <tr>
                     <td style="padding:8px;border-bottom:1px solid #eee;"><strong>Email</strong></td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;">${escapeHTML(email)}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee;">
+                      ${escapeHTML(email)}
+                    </td>
                   </tr>
                   <tr>
                     <td style="padding:8px;border-bottom:1px solid #eee;"><strong>Phone</strong></td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;">${escapeHTML(phone)}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee;">
+                      ${escapeHTML(phone)}
+                    </td>
                   </tr>
                   <tr>
                     <td style="padding:8px;border-bottom:1px solid #eee;"><strong>City</strong></td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;">${escapeHTML(city)}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee;">
+                      ${escapeHTML(city)}
+                    </td>
                   </tr>
                   <tr>
                     <td style="padding:8px;border-bottom:1px solid #eee;"><strong>Profession</strong></td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;">${escapeHTML(profession)}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee;">
+                      ${escapeHTML(profession)}
+                    </td>
                   </tr>
                   <tr>
                     <td style="padding:8px;"><strong>Purpose</strong></td>
-                    <td style="padding:8px;">${escapeHTML(purpose)}</td>
+                    <td style="padding:8px;">
+                      ${escapeHTML(purpose)}
+                    </td>
                   </tr>
                 </table>
 
@@ -141,20 +126,12 @@ const registerVisitor = async (req, res) => {
       console.error("Organizer email failed:", err);
     }
 
-    // --- Send Email to VISITOR (WITH PDF ATTACHMENT) ---
     try {
       await sendEmail({
         to: email,
-        subject: "Visitor Registration Confirmed – Bundelkhand Venture Summit 2026",
+        subject:
+          "Visitor Registration Confirmed – Bundelkhand Venture Summit 2026",
         replyTo: "support@bundelkhandventuresummit.com",
-        // ✅ ATTACHMENT LOGIC
-        attachments: pdfBuffer ? [
-            {
-                filename: `VisitorPass_${name.replace(/\s+/g, '_')}.pdf`,
-                content: pdfBuffer,
-                contentType: 'application/pdf'
-            }
-        ] : [],
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px;">
             <p>Dear ${escapeHTML(name)},</p>
@@ -163,15 +140,10 @@ const registerVisitor = async (req, res) => {
               Thank you for registering as a <strong>Visitor</strong> for
               <strong>Bundelkhand Venture Summit (BVS) 2026 – Startup Expo</strong>.
             </p>
-            
-            <p style="color: #555; font-size: 14px; font-style: italic;">
-               📎 <strong>Note:</strong> Your official Visitor Pass is attached to this email.
-            </p>
 
             <p>
               📅 <b>Date:</b> 28 February – 1 March 2026<br/>
-              📍 <b>Location:</b> Urban Haat, Behind Deen Dayal Sabhagar, Jhansi, Uttar Pradesh, India
-
+              📍 <b>Location:</b> Jhansi, Bundelkhand
             </p>
 
             <p>
@@ -192,14 +164,11 @@ const registerVisitor = async (req, res) => {
       console.error("Visitor email failed:", err);
     }
 
-    // ✅ Return Response (Including ID)
     return res.status(201).json({
       success: true,
       message: "Visitor registered successfully",
-      visitorId: visitor.visitorId, // Used by frontend for download button
       data: visitor,
     });
-
   } catch (error) {
     console.error("VISITOR CONTROLLER ERROR:", error);
     return res.status(500).json({
@@ -209,39 +178,4 @@ const registerVisitor = async (req, res) => {
   }
 };
 
-// ==========================================
-// 2. DOWNLOAD PASS CONTROLLER
-// ==========================================
-const downloadVisitorPass = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // 1. Database se visitor find karein
-    const visitor = await Visitor.findOne({ visitorId: id });
-
-    if (!visitor) {
-      return res.status(404).json({ success: false, message: "Visitor not found" });
-    }
-
-    // 2. PDF Generate karein (Buffer milega)
-    const pdfBuffer = await generateVisitorPass(visitor, 'pdf');
-
-    // 3. ✅ CRITICAL HEADERS: Inhe add karna zaroori hai
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Length': pdfBuffer.length,
-      'Content-Disposition': `attachment; filename=Pass_${visitor.name.replace(/\s+/g, '_')}.pdf`,
-      // Frontend ko headers read karne dene ke liye (CORS fix)
-      'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length'
-    });
-    
-    // 4. Send the raw buffer
-    return res.end(pdfBuffer); // Ya res.send(pdfBuffer)
-
-  } catch (error) {
-    console.error("Download Error:", error);
-    return res.status(500).json({ success: false, message: "Error generating pass" });
-  }
-};
-
-module.exports = { registerVisitor, downloadVisitorPass };
+module.exports = { registerVisitor };
