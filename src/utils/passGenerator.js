@@ -48,8 +48,13 @@ const generateVisitorPass = async (visitor, type = "pdf") => {
 
       // 2️⃣ Fallback to Puppeteer Chromium
       browser = await puppeteer.launch({
-        headless: "new",
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+        ],
       });
     }
     const page = await browser.newPage();
