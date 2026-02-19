@@ -29,7 +29,7 @@ const generateVisitorPass = async (visitor, type = "pdf") => {
     );
 
     // Background Image Load
-    const imagePath = path.join(__dirname, "../pass/pass1.jpeg");
+    const imagePath = path.join(__dirname, "../pass/passes.png");
     const backgroundBase64 = imageToBase64(imagePath);
 
     if (!backgroundBase64) {
@@ -91,7 +91,7 @@ const generateVisitorPass = async (visitor, type = "pdf") => {
           /* NAME: Authorized Stamp ke theek neeche center me */
           .stub-name {
             position: absolute;
-            top: 280px;        /* Authorized Box ke neeche gap */
+            top: 300px;        /* Authorized Box ke neeche gap */
             left: 1230px;      /* Stub start position */
             width: 380px;      /* Stub width for centering */
             text-align: center;
@@ -108,7 +108,7 @@ const generateVisitorPass = async (visitor, type = "pdf") => {
           /* ID: Bottom me 'Ticket Number' line ke upar */
           .stub-id {
             position: absolute;
-            top: 330px;        /* Line ke theek upar */
+            top: 350px;        /* Line ke theek upar */
             left: 1300px;      /* "TICKET NUMBER:" text ke baad shift kiya */
             font-family: 'Courier Prime', monospace;
             font-size: 34px;

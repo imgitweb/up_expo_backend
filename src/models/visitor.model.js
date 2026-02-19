@@ -9,7 +9,7 @@ const visitorSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      
       unique: true, // Prevents duplicate emails
       trim: true,
       lowercase: true,
@@ -31,7 +31,6 @@ const visitorSchema = new mongoose.Schema(
     },
     purpose: {
       type: String,
-      required: true,
       trim: true,
     },
     // ✅ NEW FIELD: visitorId

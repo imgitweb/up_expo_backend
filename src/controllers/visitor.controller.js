@@ -24,58 +24,56 @@ const registerVisitor = async (req, res) => {
     const { name, email, phone, city, profession, purpose } = req.body;
 
     // --- Validation ---
+    // Email aur Purpose ko required list se hata diya gaya hai
     if (
       !name?.trim() ||
-      !email?.trim() ||
       !phone?.trim() ||
       !city?.trim() ||
-      !profession?.trim() ||
-      !purpose?.trim()
+      !profession?.trim()
     ) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required",
+        message: "Name, Phone, City and Profession are required",
       });
     }
 
-    // --- Duplicate Check ---
-    const exists = await Visitor.findOne({ email: email.trim() });
-    if (exists) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already registered",
-      });
+    // --- Duplicate Check (Only if Email is provided) ---
+    if (email && email.trim() !== "") {
+      const exists = await Visitor.findOne({ email: email.trim() });
+      if (exists) {
+        return res.status(409).json({
+          success: false,
+          message: "Email already registered",
+        });
+      }
     }
 
     const currentCount = await Visitor.countDocuments();
     const nextNumber = currentCount + 1;
 
     // --- Generate Visitor ID ---
-    // ✅ Generates a random 6-digit ID like "BVS-123456"
     const generatedVisitorId = "BVS-" + String(nextNumber).padStart(5, "0");
 
     // --- Create Visitor in DB ---
-    // ✅ Saving the generated ID to the database
     const visitor = await Visitor.create({
       name: name.trim(),
-      email: email.trim(),
+      email: email?.trim() || null, // Optional email
       phone: phone.trim(),
       city: city.trim(),
       profession: profession.trim(),
-      purpose: purpose.trim(),
+      purpose: purpose?.trim() || "", // Optional purpose
       visitorId: generatedVisitorId 
     });
 
-    // --- Generate PDF Pass (For Email) ---
+    // --- Generate PDF Pass ---
     let pdfBuffer = null;
     try {
         pdfBuffer = await generateVisitorPass(visitor, 'pdf');
     } catch (err) {
         console.error("PDF Generation Failed for Email:", err);
-        // We continue execution so email is still sent, even if PDF fails
     }
 
-    // --- Send Email to ORGANIZER (No Attachment) ---
+    // --- Send Email to ORGANIZER (Styling unchanged) ---
     try {
       await sendEmail({
         to: process.env.ORGANIZER_EMAIL || "startupexpo2026@gmail.com",
@@ -103,7 +101,7 @@ const registerVisitor = async (req, res) => {
                   </tr>
                   <tr>
                     <td style="padding:8px;border-bottom:1px solid #eee;"><strong>Email</strong></td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;">${escapeHTML(email)}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee;">${email ? escapeHTML(email) : "N/A"}</td>
                   </tr>
                   <tr>
                     <td style="padding:8px;border-bottom:1px solid #eee;"><strong>Phone</strong></td>
@@ -119,7 +117,7 @@ const registerVisitor = async (req, res) => {
                   </tr>
                   <tr>
                     <td style="padding:8px;"><strong>Purpose</strong></td>
-                    <td style="padding:8px;">${escapeHTML(purpose)}</td>
+                    <td style="padding:8px;">${purpose ? escapeHTML(purpose) : "N/A"}</td>
                   </tr>
                 </table>
 
@@ -141,62 +139,63 @@ const registerVisitor = async (req, res) => {
       console.error("Organizer email failed:", err);
     }
 
-    // --- Send Email to VISITOR (WITH PDF ATTACHMENT) ---
-    try {
-      await sendEmail({
-        to: email,
-        subject: "Visitor Registration Confirmed – Bundelkhand Venture Summit 2026",
-        replyTo: "support@bundelkhandventuresummit.com",
-        // ✅ ATTACHMENT LOGIC
-        attachments: pdfBuffer ? [
-            {
-                filename: `VisitorPass_${name.replace(/\s+/g, '_')}.pdf`,
-                content: pdfBuffer,
-                contentType: 'application/pdf'
-            }
-        ] : [],
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px;">
-            <p>Dear ${escapeHTML(name)},</p>
+    // --- Send Email to VISITOR (ONLY IF EMAIL PROVIDED - Styling unchanged) ---
+    if (email && email.trim() !== "") {
+        try {
+          await sendEmail({
+            to: email.trim(),
+            subject: "Visitor Registration Confirmed – Bundelkhand Venture Summit 2026",
+            replyTo: "support@bundelkhandventuresummit.com",
+            attachments: pdfBuffer ? [
+                {
+                    filename: `VisitorPass_${name.replace(/\s+/g, '_')}.pdf`,
+                    content: pdfBuffer,
+                    contentType: 'application/pdf'
+                }
+            ] : [],
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                <p>Dear ${escapeHTML(name)},</p>
 
-            <p>
-              Thank you for registering as a <strong>Visitor</strong> for
-              <strong>Bundelkhand Venture Summit (BVS) 2026 – Startup Expo</strong>.
-            </p>
-            
-            <p style="color: #555; font-size: 14px; font-style: italic;">
-               📎 <strong>Note:</strong> Your official Visitor Pass is attached to this email.
-            </p>
+                <p>
+                  Thank you for registering as a <strong>Visitor</strong> for
+                  <strong>Bundelkhand Venture Summit (BVS) 2026 – Startup Expo</strong>.
+                </p>
+                
+                <p style="color: #555; font-size: 14px; font-style: italic;">
+                   📎 <strong>Note:</strong> Your official Visitor Pass is attached to this email.
+                </p>
 
-            <p>
-              📅 <b>Date:</b> 28 February – 1 March 2026<br/>
-              📍 <b>Location:</b> Urban Haat, Behind Deen Dayal Sabhagar, Jhansi, Uttar Pradesh, India
+                <p>
+                  📅 <b>Date:</b> 28 February – 1 March 2026<br/>
+                  📍 <b>Location:</b> Urban Haat, Behind Deen Dayal Sabhagar, Jhansi, Uttar Pradesh, India
 
-            </p>
+                </p>
 
-            <p>
-              <strong>Get in Touch</strong><br />
-              <a href="https://www.instagram.com/bundelkhandventuresummit">Instagram</a>
-              &nbsp;|&nbsp;
-              <a href="https://www.linkedin.com/company/bundelkhandexpo/about/">LinkedIn</a>
-            </p>
+                <p>
+                  <strong>Get in Touch</strong><br />
+                  <a href="https://www.instagram.com/bundelkhandventuresummit">Instagram</a>
+                  &nbsp;|&nbsp;
+                  <a href="https://www.linkedin.com/company/bundelkhandexpo/about/">LinkedIn</a>
+                </p>
 
-            <p>
-              Regards,<br/>
-              <strong>Bundelkhand Venture Summit Team</strong>
-            </p>
-          </div>
-        `,
-      });
-    } catch (err) {
-      console.error("Visitor email failed:", err);
+                <p>
+                  Regards,<br/>
+                  <strong>Bundelkhand Venture Summit Team</strong>
+                </p>
+              </div>
+            `,
+          });
+        } catch (err) {
+          console.error("Visitor email failed:", err);
+        }
     }
 
-    // ✅ Return Response (Including ID)
+    // ✅ Return Response
     return res.status(201).json({
       success: true,
       message: "Visitor registered successfully",
-      visitorId: visitor.visitorId, // Used by frontend for download button
+      visitorId: visitor.visitorId,
       data: visitor,
     });
 
@@ -215,28 +214,22 @@ const registerVisitor = async (req, res) => {
 const downloadVisitorPass = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // 1. Database se visitor find karein
     const visitor = await Visitor.findOne({ visitorId: id });
 
     if (!visitor) {
       return res.status(404).json({ success: false, message: "Visitor not found" });
     }
 
-    // 2. PDF Generate karein (Buffer milega)
     const pdfBuffer = await generateVisitorPass(visitor, 'pdf');
 
-    // 3. ✅ CRITICAL HEADERS: Inhe add karna zaroori hai
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Length': pdfBuffer.length,
       'Content-Disposition': `attachment; filename=Pass_${visitor.name.replace(/\s+/g, '_')}.pdf`,
-      // Frontend ko headers read karne dene ke liye (CORS fix)
       'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length'
     });
     
-    // 4. Send the raw buffer
-    return res.end(pdfBuffer); // Ya res.send(pdfBuffer)
+    return res.end(pdfBuffer);
 
   } catch (error) {
     console.error("Download Error:", error);
