@@ -9,8 +9,6 @@ const visitorSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      
-      unique: true, // Prevents duplicate emails
       trim: true,
       lowercase: true,
     },
